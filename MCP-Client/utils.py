@@ -14,14 +14,10 @@ async def main():
     openai_key = os.getenv('OPENAI_API_KEY')
     owm_key = os.getenv('OWM_API_KEY')
 
-    # Get absolute path to the directory containing util.py
     project_root = os.path.dirname(os.path.abspath(__file__))
     
-    # Path to the Go MCP folder
     mcp_dir = os.path.join(project_root, "mcp-openweather")
 
-    # Initialize MultiServerMCPClient
-    # Uses 'go run -C <mcp_dir> main.go' to locate go.mod correctly
     client = MultiServerMCPClient(
         {
             "weather": {
@@ -36,18 +32,14 @@ async def main():
         }
     )
 
-    # Fetch tools exposed by the Go MCP server
     tools = await client.get_tools()
 
-    # Initialize OpenAI model
     model = ChatOpenAI(model="gpt-4o-mini", api_key=openai_key)
 
-    # Define model invocation node
     def call_model(state: MessagesState):
         response = model.bind_tools(tools).invoke(state["messages"])
         return {"messages": [response]}
 
-    # Build LangGraph state workflow
     builder = StateGraph(MessagesState)
     builder.add_node("call_model", call_model)
     builder.add_node("tools", ToolNode(tools))
@@ -58,7 +50,6 @@ async def main():
 
     graph = builder.compile()
 
-    # Asynchronously invoke the state graph
     result = await graph.ainvoke({
         "messages": [{"role": "user", "content": "Whats the weather in banglore?"}]
     })
